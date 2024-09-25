@@ -19,8 +19,7 @@ using StatsModels: StatsModels
 
 ## Import to implement new methods
 import Base: show, broadcastable, convert, ==
-import GLM:
-    dispersion, LinPred, DensePred, ModResp, delbeta!, linpred!, installbeta!, cholpred
+import GLM: dispersion, LinPred, DensePred, ModResp, delbeta!, linpred!, installbeta!
 import StatsBase:
     fit,
     fit!,
@@ -236,12 +235,14 @@ See the documentation for each for more details.
 """
 abstract type AbstractRobustModel{T} <: RegressionModel end
 
+"Robust Response structure"
 abstract type RobustResp{T} <: ModResp end
 
+"Abstract type for predictor with regularization"
 abstract type AbstractRegularizedPred{T} end
 
-Base.broadcastable(m::T) where {T<:AbstractEstimator} = Ref(m)
-Base.broadcastable(m::T) where {T<:LossFunction} = Ref(m)
+Base.broadcastable(m::AbstractEstimator) = Ref(m)
+Base.broadcastable(m::LossFunction) = Ref(m)
 
 
 include("tools.jl")

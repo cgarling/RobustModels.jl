@@ -1,15 +1,18 @@
 using Documenter
-using GLM, StatsBase, SparseArrays, LinearAlgebra
+using GLM, StatsBase, StatsAPI, SparseArrays, LinearAlgebra
 using RobustModels
 
 DocMeta.setdocmeta!(
-    RobustModels, :DocTestSetup, :(using RobustModels, StatsBase, GLM); recursive=true
+    RobustModels,
+    :DocTestSetup,
+    :(using RobustModels, StatsBase, GLM, StatsAPI);
+    recursive=true,
 )
 
 prettyurls = get(ENV, "CI", "false") == "true"
 
 makedocs(;
-    modules=[RobustModels, GLM, StatsBase],
+    modules=[RobustModels, GLM, StatsBase, StatsAPI],
     sitename="RobustModels",
     authors="Bertrand Lacoste <bertrand.lacoste@gmail.com>",
     repo="https://github.com/getzze/RobustModels.jl/blob/{commit}{path}#{line}",
@@ -18,17 +21,18 @@ makedocs(;
         canonical="https://getzze.github.io/RobustModels.jl",
         assets=["assets/favicon.ico"],
     ),
+    #! format: off
     pages=[
-        "Home" => "index.md", 
-        "manual.md", 
-        "examples.md", 
+        "Home" => "index.md",
+        "manual.md",
+        "examples.md",
         "api.md",
     ],
+    #! format: on
+    ## Uncomment the line below to re-generate doctest outputs
     # doctest = :fix,
+    warnonly=[:missing_docs],
     debug=false,
 )
 
-deploydocs(; 
-    devbranch="main", 
-    repo="github.com/getzze/RobustModels.jl",
-)
+deploydocs(; devbranch="main", repo="github.com/getzze/RobustModels.jl")

@@ -8,20 +8,23 @@ AbstractEstimator
 AbstractQuantileEstimator
 LossFunction
 RobustLinearModel
+RobustModels.RobustLinResp
+GLM.LinPred
 RobustModels.DensePredCG
 RobustModels.SparsePredCG
 GLM.DensePredChol
 GLM.SparsePredChol
+GLM.DensePredQR
 RobustModels.RidgePred
-RobustModels.RobustLinResp
+RobustModels.AbstractRegularizedPred
 QuantileRegression
 ```
 
 ## Constructors for models
 
 ```@docs
-fit(::Type{M}, ::Union{AbstractMatrix{T},SparseMatrixCSC{T}}, ::AbstractVector{T}, ::AbstractEstimator) where {T<:AbstractFloat, M<:RobustLinearModel}
-fit(::Type{M}, ::Union{AbstractMatrix{T},SparseMatrixCSC{T}}, ::AbstractVector{T}) where {T<:AbstractFloat, M<:QuantileRegression}
+fit(::Type{M}, ::Union{AbstractMatrix{T}}, ::AbstractVector{T}, ::AbstractMEstimator) where {T<:AbstractFloat, M<:RobustLinearModel}
+fit(::Type{M}, ::Union{AbstractMatrix{T}}, ::AbstractVector{T}) where {T<:AbstractFloat, M<:QuantileRegression}
 ```
 
 ```@docs
@@ -33,34 +36,45 @@ refit!
 
 ## Model methods
 ```@docs
-StatsBase.coef
-StatsBase.coeftable
-StatsBase.confint
+StatsModels.coef
+StatsAPI.coeftable
+StatsAPI.coefnames
+StatsModels.responsename
+StatsAPI.confint
 StatsBase.deviance
 StatsBase.nulldeviance
-StatsBase.dof
-StatsBase.dof_residual
-nobs(::StatisticalModel)
-StatsBase.isfitted
-StatsBase.islinear
-StatsBase.loglikelihood
-StatsBase.nullloglikelihood
-StatsBase.stderror
+StatsAPI.dof
+StatsAPI.dof_residual
+StatsBase.nobs
+wobs
+StatsAPI.isfitted
+StatsAPI.islinear
+StatsAPI.loglikelihood
+StatsAPI.nullloglikelihood
+StatsAPI.stderror
 StatsBase.vcov
 StatsBase.weights
 workingweights
-StatsBase.fitted
+StatsAPI.fitted
 StatsBase.predict
-StatsBase.leverage
-StatsBase.modelmatrix
+StatsModels.leverage
+leverage_weights
+StatsAPI.modelmatrix
 projectionmatrix
-GLM.dispersion(::RobustLinearModel, ::Bool)
-StatsBase.response
-StatsBase.residuals
+dispersion(::RobustLinearModel, ::Bool)
+StatsAPI.response
+StatsAPI.residuals
+StatsModels.hasintercept
+hasformula
+formula
 scale
 tauscale
 RobustModels.location_variance
 Estimator
+GLM.linpred!
+RobustModels.pirls!
+RobustModels.pirls_Sestimate!
+RobustModels.pirls_τestimate!
 ```
 
 ## Estimators
@@ -78,6 +92,7 @@ RobustModels.QuantileEstimator
 
 ## Loss functions
 ```@docs
+BoundedLossFunction
 L2Loss
 L1Loss
 HuberLoss
@@ -85,11 +100,15 @@ L1L2Loss
 FairLoss
 LogcoshLoss
 ArctanLoss
+CatoniWideLoss
+CatoniNarrowLoss
 CauchyLoss
 GemanLoss
 WelschLoss
 TukeyLoss
 YohaiZamarLoss
+HardThresholdLoss
+HampelLoss
 ```
 
 ## Estimator and Loss functions methods
@@ -98,7 +117,7 @@ RobustModels.rho
 RobustModels.psi
 RobustModels.psider
 RobustModels.weight
-RobustModels.values
+RobustModels.estimator_values
 RobustModels.estimator_norm
 RobustModels.estimator_bound
 tuning_constant
@@ -121,5 +140,3 @@ RobustModels.update_weight!
 RobustModels.tau_scale_estimate
 RobustModels.quantile_weight
 ```
-
-

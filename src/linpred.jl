@@ -1,3 +1,4 @@
+import GLM: cholpred
 
 
 #################
@@ -20,7 +21,7 @@ leverage_weights(p::LinPred, wt::AbstractVector) = sqrt.(1 .- leverage(p, wt))
 ###
 ### From GLM, for information
 ###
-#"""
+#""":missing_docs
 #    linpred!(out, p::LinPred, f::Real=1.0)
 #Overwrite `out` with the linear predictor from `p` with factor `f`
 #The effective coefficient vector, `p.scratchbeta`, is evaluated as `p.beta0 .+ f * p.delbeta`,
@@ -55,14 +56,10 @@ leverage_weights(p::LinPred, wt::AbstractVector) = sqrt.(1 .- leverage(p, wt))
 ######  DensePredQR
 ##########################################
 
-@static if get_pkg_version(GLM) < v"1.9"
-    @warn(
-        "GLM.DensePredQR(X::AbstractMatrix, pivot::Bool=true) is not defined, " *
-            "fallback to unpivoted RobustModels.DensePredQR definition. " *
-            "To use pivoted QR, GLM version should be greater than or equal to v1.9."
-    )
-
+@static if get_pkg_version(GLM) < v"1.10"
     using LinearAlgebra: QRCompactWY, QRPivoted, Diagonal, qr!, qr
+
+    QRPIVOTED_WARNING_SHOWN = false
 
     """
         DensePredQR
@@ -74,7 +71,7 @@ leverage_weights(p::LinPred, wt::AbstractVector) = sqrt.(1 .- leverage(p, wt))
     - `X`: Model matrix of size `n` × `p` with `n ≥ p`.  Should be full column rank.
     - `beta0`: base coefficient vector of length `p`
     - `delbeta`: increment to coefficient vector, also of length `p`
-    - `scratchbeta`: scratch vector of length `p`, used in `linpred!` method
+    - `scratchbeta`: scratch vector of length `p`, used in [`GLM.linpred!`](@ref) method
     - `qr`: a `QRCompactWY` object created from `X`, with optional row weights.
     - `scratchm1`: scratch Matrix{T} of the same size as `X`
     - `scratchm2`: scratch Matrix{T} of the same size as `X`
@@ -91,6 +88,15 @@ leverage_weights(p::LinPred, wt::AbstractVector) = sqrt.(1 .- leverage(p, wt))
         scratchR::Matrix{T}
 
         function DensePredQR(X::AbstractMatrix, pivot::Bool=false)
+            if pivot && !QRPIVOTED_WARNING_SHOWN
+                @warn(
+                    "GLM.DensePredQR(X::AbstractMatrix, pivot::Bool=true) is not defined, " *
+                        "fallback to unpivoted RobustModels.DensePredQR definition. " *
+                        "To use pivoted QR, GLM version should be greater than or equal to v1.10."
+                )
+                QRPIVOTED_WARNING_SHOWN = true
+            end
+
             n, p = size(X)
             T = typeof(float(zero(eltype(X))))
 
@@ -150,8 +156,8 @@ leverage_weights(p::LinPred, wt::AbstractVector) = sqrt.(1 .- leverage(p, wt))
         n, m = size(X)
         if n >= m
             # W½ X = Q R  , with Q'Q = I
-            # X'WX β = X'y  =>  R'Q'QR β = X'y
-            # => β = R⁻¹ R⁻ᵀ X'y
+            # X'WX β = X'Wy  =>  R'Q'QR β = X'Wy
+            # => β = R⁻¹ R⁻ᵀ X'Wy
             qnr = p.qr = qr(scratchm1)
             Rinv = p.scratchR = inv(qnr.R)
 
@@ -162,25 +168,49 @@ leverage_weights(p::LinPred, wt::AbstractVector) = sqrt.(1 .- leverage(p, wt))
             p.delbeta = Rinv * Rinv' * p.delbeta
         else
             # (W½ X)' = Q R  , with Q'Q = I
-            # W½X β = W½y  =>  R'Q' β = y
-            # => β = Q . [R⁻ᵀ y; 0]
+            # W½X β = W½y  =>  R'Q' β = W½ y
+            # => β = Q . [R⁻ᵀ W½ y; 0]
             qnrT = p.qr = qr(scratchm1')
             RTinv = p.scratchR = inv(qnrT.R)'
             @assert 1 <= n <= size(p.delbeta, 1)
-            mul!(view(p.delbeta, 1:n), RTinv, r)
             p.delbeta = zeros(size(p.delbeta))
-            p.delbeta[1:n] .= RTinv * r
+            p.delbeta[1:n] .= RTinv * sqrtW * r
             lmul!(qnrT.Q, p.delbeta)
         end
         return p
     end
 
-
-    ## Use DensePredQR from GLM
 else
+    ## Use DensePredQR from GLM
     using GLM: DensePredQR
+    # GLM.DensePredQR(X::AbstractMatrix, pivot::Bool) is defined in #master
     import GLM: qrpred
 end
+
+
+##########################################
+######  [Dense/Sparse]PredChol
+##########################################
+
+# Only for documentation
+
+"""
+    SparsePredChol{T,M<:SparseMatrixCSC,C} where {T,C}
+
+A `LinPred` type with a sparse Cholesky factorization of `X'X`.
+No pivot option.
+
+# Members
+
+- `X`: model matrix of size `n` × `p` with `n ≥ p`.  Should be full column rank.
+- `Xt`: transpose of the model matrix.
+- `beta0`: base coefficient vector of length `p`
+- `delbeta`: increment to coefficient vector, also of length `p`
+- `scratchbeta`: scratch vector of length `p`, used in [`GLM.linpred!`](@ref) method
+- `chol`: a sparse `Cholesky` object created from `X'X`, possibly using row weights.
+- `scratch`: scratch SparseMatrixCSC{T} of the same size as `X`
+"""
+GLM.SparsePredChol
 
 
 ##########################################
@@ -197,7 +227,7 @@ A `LinPred` type with Conjugate Gradient and a dense `X`
 - `X`: Model matrix of size `n` × `p` with `n ≥ p`.  Should be full column rank.
 - `beta0`: base coefficient vector of length `p`
 - `delbeta`: increment to coefficient vector, also of length `p`
-- `scratchbeta`: scratch vector of length `p`, used in [`linpred!`](@ref) method
+- `scratchbeta`: scratch vector of length `p`, used in [`GLM.linpred!`](@ref) method
 """
 mutable struct DensePredCG{T<:BlasReal} <: DensePred
     X::Matrix{T}                  # model matrix
@@ -256,7 +286,7 @@ A `LinPred` type with Conjugate Gradient and a sparse `X`
 - `X`: Model matrix of size `n` × `p` with `n ≥ p`.  Should be full column rank.
 - `beta0`: base coefficient vector of length `p`
 - `delbeta`: increment to coefficient vector, also of length `p`
-- `scratchbeta`: scratch vector of length `p`, used in [`linpred!`](@ref) method
+- `scratchbeta`: scratch vector of length `p`, used in [`GLM.linpred!`](@ref) method
 """
 mutable struct SparsePredCG{T,M<:SparseMatrixCSC} <: LinPred
     X::M                    # model matrix
