@@ -247,7 +247,7 @@ The S-estimator is obtained by minimizing the scale estimate:
 \\hat{\\mathbf{\\beta}} = \\underset{\\mathbf{\\beta}}{\\textrm{argmin }} \\hat{\\sigma}^2
 ```
 
-where the robust scale estimate ``\\hat{\\sigma}}`` is solution of:
+where the robust scale estimate ``\\hat{\\sigma}`` is solution of:
 
 
 ```math
