@@ -3,6 +3,6 @@ docs/site
 docs/src/assets/*.svg
 test/scratch.jl
 tune.json
-Manifest.toml
+/Manifest.toml
 settings.json
 docs/jmd
